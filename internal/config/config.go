@@ -13,11 +13,11 @@ type Config struct {
 	Env         string
 	StoragePath string
 	TokenTTL    time.Duration
-	GRPCConfig
+	GRPC        GRPCConfig
 }
 
 type GRPCConfig struct {
-	Port    string
+	Port    int
 	Timeout time.Duration
 }
 
@@ -41,7 +41,7 @@ func MustLoad() *Config {
 
 	// STORAGE_PATH
 	cfg.StoragePath = os.Getenv("STORAGE_PATH")
-	if cfg.Env == "" {
+	if cfg.StoragePath == "" {
 		log.Fatalf("%s: STORAGE_PATH is required", baseError)
 	}
 
@@ -57,9 +57,13 @@ func MustLoad() *Config {
 	cfg.TokenTTL = time.Duration(TTLInt) * time.Hour
 
 	// GRPC_PORT
-	cfg.GRPCConfig.Port = os.Getenv("GRPC_PORT")
-	if cfg.Env == "" {
+	portString := os.Getenv("GRPC_PORT")
+	if portString == "" {
 		log.Fatalf("%s: GRPC_PORT is required", baseError)
+	}
+	cfg.GRPC.Port, err = strconv.Atoi(portString)
+	if err != nil {
+		log.Fatalf("%s: invalid GRPC_TIMEOUT value. Must be int type", baseError)
 	}
 
 	// GRPC_TIMEOUT
@@ -71,7 +75,7 @@ func MustLoad() *Config {
 	if err != nil {
 		log.Fatalf("%s: invalid GRPC_TIMEOUT value. Must be int type", baseError)
 	}
-	cfg.GRPCConfig.Timeout = time.Duration(timeOutInt) * time.Second
+	cfg.GRPC.Timeout = time.Duration(timeOutInt) * time.Second
 
 	return &cfg
 }

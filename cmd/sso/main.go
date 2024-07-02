@@ -3,23 +3,39 @@ package main
 import (
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/renlin-code/grpc-sso-microservice/internal/app"
 	"github.com/renlin-code/grpc-sso-microservice/internal/config"
 	"github.com/renlin-code/grpc-sso-microservice/internal/lib/logger/handlers/slogpretty"
 )
-
-func main() {
-	cfg := config.MustLoad()
-	log := setupLogger(cfg.Env)
-
-	log.Info("starting server", slog.Any("config", cfg))
-}
 
 const (
 	envLocal = "local"
 	envDev   = "dev"
 	envProd  = "prod"
 )
+
+func main() {
+	cfg := config.MustLoad()
+	log := setupLogger(cfg.Env)
+
+	log.Info("starting application", slog.Any("config", cfg))
+
+	application := app.NewApp(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
+	go application.GRPCSrv.MustRun()
+
+	stop := make(chan os.Signal, 1)
+
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	sign := <-stop
+
+	log.Info("stopping application", slog.String("signal", sign.String()))
+	application.GRPCSrv.Stop()
+	log.Info("application gracefully stoped")
+}
 
 func setupLogger(env string) *slog.Logger {
 	var log *slog.Logger
